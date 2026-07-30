@@ -1,0 +1,6 @@
+{
+  "name": "Veklom cAPI Control Plane",
+  "description": "Unified Multi-Agent Orchestration, EUC (Everything Universal Code) Capability Registry, Abide Blueprint Planner, PGL Evidence & Governance Portal for Veklom Systems.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
