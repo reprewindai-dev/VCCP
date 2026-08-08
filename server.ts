@@ -4,7 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import { checkOllamaHealth, executeCAPIInvocation } from './src/server/capi-engine.js';
 import { compileAbideBlueprint } from './src/server/abide-planner.ts';
 import { INITIAL_SKILLS_REGISTRY, scanSkillSecurity } from './src/server/repogate-scanner.js';
-import { generateX402Offer, verifyAndIssueLease, listActiveLeases, evictLease } from './src/server/x402-engine.js';
+import { generateX402Offer, executePaidCapability, verifyPaidExecution } from './src/server/x402-engine.js';
 import { ContainerNodeHealth } from './src/types.js';
 
 async function startServer() {
@@ -71,52 +71,77 @@ async function startServer() {
     }
   });
 
-  // API Route 3B: X402 Payment Required Offer
-  app.post('/api/v1/x402/offer', (req, res) => {
-    const { skillId, basePrice, concurrentAgents, resourceLoad } = req.body;
-    if (!skillId) {
-      return res.status(400).json({ error: 'Missing required field: skillId' });
+  // API Route 3B: Canonical x402 Payment Challenge
+  app.post('/api/v1/x402/offer', async (req, res) => {
+    try {
+      const { skillId, parameters } = req.body;
+      if (!skillId) {
+        return res.status(400).json({ error: 'Missing required field: skillId' });
+      }
+      const offer = await generateX402Offer(skillId, parameters || {});
+      return res.status(402).json(offer);
+    } catch (err: any) {
+      return res.status(502).json({ error: err.message || 'Canonical x402 challenge failed' });
     }
-    const offer = generateX402Offer(
-      skillId,
-      basePrice || 0.0025,
-      concurrentAgents || Math.floor(Math.random() * 10 + 10),
-      resourceLoad || Math.floor(Math.random() * 30 + 25)
-    );
-    return res.status(402).json(offer);
   });
 
-  // API Route 3C: X402 Payment Verification & Evaporating Lease Issuance
-  app.post('/api/v1/x402/verify', (req, res) => {
-    const { skillId, agentIdentity, humanOwner, ttlSeconds, maxInvocations, paymentProof } = req.body;
-    if (!skillId) {
-      return res.status(400).json({ error: 'Missing required field: skillId' });
+  // API Route 3C: Canonical paid capability execution + evidence verification
+  app.post('/api/v1/x402/verify', async (req, res) => {
+    try {
+      const { skillId, paymentProof, parameters, idempotencyKey, challengeId } = req.body;
+      if (!skillId || !paymentProof) {
+        return res.status(400).json({ error: 'Missing required fields: skillId, paymentProof' });
+      }
+
+      const execution = await executePaidCapability({
+        skillId,
+        paymentProof,
+        parameters: parameters || {},
+        idempotencyKey,
+        challengeId
+      });
+
+      const verification = await verifyPaidExecution({
+        receiptId: execution.receiptId,
+        proofHash: execution.proofHash,
+        evidenceHash: execution.evidenceHash
+      });
+
+      if (!verification.valid) {
+        return res.status(502).json({
+          success: false,
+          error: 'Canonical execution completed but persisted evidence verification failed.',
+          execution,
+          verification
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'x402 payment settled, capability executed, and evidence verified.',
+        execution,
+        verification
+      });
+    } catch (err: any) {
+      return res.status(502).json({ error: err.message || 'Canonical paid capability execution failed' });
     }
-    const lease = verifyAndIssueLease(
-      skillId,
-      agentIdentity || 'autonomous-agent-01',
-      humanOwner || 'reprewindai@gmail.com',
-      ttlSeconds || 300,
-      maxInvocations || 10,
-      paymentProof
-    );
-    return res.json({ success: true, message: 'X402 Microtransaction Verified. Ephemeral Lease Active.', lease });
   });
 
-  // API Route 3D: List Active Evaporating Capability Leases
-  app.get('/api/v1/x402/leases', (req, res) => {
-    const leases = listActiveLeases();
-    return res.json(leases);
+  // API Route 3D: x402 status/discovery. VCCP does not own lease state.
+  app.get('/api/v1/x402/leases', (_req, res) => {
+    return res.json({
+      authoritative: false,
+      leases: [],
+      message: 'Local VCCP lease state was retired. Paid capability authority is issued and verified by the canonical Veklom runtime.'
+    });
   });
 
-  // API Route 3E: Force Eviction of a Lease
-  app.post('/api/v1/x402/evict', (req, res) => {
-    const { leaseId } = req.body;
-    if (!leaseId) {
-      return res.status(400).json({ error: 'Missing required field: leaseId' });
-    }
-    const evicted = evictLease(leaseId);
-    return res.json({ success: evicted, leaseId, message: evicted ? 'Lease evicted successfully' : 'Lease not found' });
+  // API Route 3E: Local lease eviction retired; authority revocation belongs to canonical runtime.
+  app.post('/api/v1/x402/evict', (_req, res) => {
+    return res.status(410).json({
+      success: false,
+      error: 'Local lease eviction is retired. Use the canonical Veklom authority/revocation API.'
+    });
   });
 
   // API Route 4: Abide Hierarchical Abstract Plan Controller
