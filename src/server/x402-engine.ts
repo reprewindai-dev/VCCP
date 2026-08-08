@@ -200,3 +200,19 @@ export async function verifyPaidExecution(input: {
   }
   return body as CanonicalEvidenceVerification;
 }
+
+/**
+ * Legacy compatibility guard for older server code that still presents an
+ * `x402Token`. Local VCCP lease tokens are no longer an authority primitive.
+ * This function intentionally never grants authority; callers must use the
+ * canonical paid-execution flow above.
+ */
+export function verifyLeaseToken(_token: string): {
+  valid: false;
+  error: string;
+} {
+  return {
+    valid: false,
+    error: 'Legacy VCCP lease tokens are retired. Use canonical x402 paid execution and receipt/evidence verification.'
+  };
+}
