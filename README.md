@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> **VEKLOM BIBLE — READ FIRST:** [`00_VEKLOM_BIBLE.md`](./00_VEKLOM_BIBLE.md)
+> It supersedes older cross-repo architecture/deployment/alignment claims wherever they conflict.
+
 # VCCP
 
 Veklom Capability Control Plane.
