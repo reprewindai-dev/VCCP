@@ -1,3 +1,11 @@
+> **Prototype notice (2026-10-11).** VCCP is an early interface and provider-router prototype. It is **not** Veklom's
+> production system and is not deployed. Several values it displays are **simulated, not measured**:
+> `reputationScore` (random 90–99, `seed_skills.js`), CPU and memory usage and the VNP node id (random,
+> `src/server/gnomledger-pgl.ts`), the divergence index (random, `src/server/capi-engine.ts`), the "Einstein" score
+> (`src/server/abide-planner.ts`), run duration (padded with random milliseconds) and a fixed `latencyMs: 12.8`
+> (`server.ts`). Do not cite any number from this repository as evidence. Production evidence for Veklom lives at
+> https://veklom.com (receipts verifiable in the ledger).
+
 > [!IMPORTANT]
 > **VEKLOM BIBLE — READ FIRST:** [`00_VEKLOM_BIBLE.md`](./00_VEKLOM_BIBLE.md)
 > It supersedes older cross-repo architecture/deployment/alignment claims wherever they conflict.
